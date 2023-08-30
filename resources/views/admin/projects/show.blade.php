@@ -16,6 +16,14 @@
                     <img src="{{ asset('storage/' . $project->image) }}" alt="{{ $project->title }}">
                 @endif
 
+                @if ( count($project->technologies) > 0)
+                    <h6 class="card-header">
+                        @foreach ($post->technologies as $technology)
+                            {{ $technology->name }} --
+                        @endforeach
+                    </h6>
+                @endif
+
                 <div class="card-body">
                     <h5 class="card-title">
                         {{ $project->title }}

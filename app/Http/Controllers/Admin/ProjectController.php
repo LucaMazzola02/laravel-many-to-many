@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Type;
+use App\Models\Technology;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +32,8 @@ class ProjectController extends Controller
     {
         //
         $types = Type::all();
-        return view('admin.projects.create', compact('types'));
+        $technologies = Technology::all();
+        return view('admin.projects.create', compact('types', 'technologies'));
     }
 
     /**
@@ -44,6 +46,8 @@ class ProjectController extends Controller
             'title' => ['required', 'unique:projects','min:3', 'max:255'],
             'image' => ['image'],
             'content' => ['required', 'min:10'],
+            'technologies' => ['exists:technologies,id'],
+            'type_id' => ['required', 'exists:types,id'],
         ]);
 
         if ($request->hasFile('image')){
@@ -52,10 +56,14 @@ class ProjectController extends Controller
         }
 
         $data['slug'] = Str::of($data['title'])->slug('-');
-        $newproject = Project::create($data);
+        $newProject = Project::create($data);
 
         $newProject->slug = Str::of("$newProject->id " . $data['title'])->slug('-');
         $newProject->save();
+
+        if ($request->has('technologies')){
+            $newPost->technologies()->sync( $request->technologies);
+        }
 
         return redirect()->route('admin.projects.index');
 
@@ -77,7 +85,8 @@ class ProjectController extends Controller
     {
         //
         $types = Type::all();
-        return view('admin.projects.edit', compact('project', 'types'));
+        $technologies = Technology::all();
+        return view('admin.projects.edit', compact('project', 'types', 'technologies'));
     }
 
     /**
@@ -91,6 +100,8 @@ class ProjectController extends Controller
             'title' => ['required', 'min:3', 'max:255', Rule::unique('projects')->ignore($project->id)],
             'image' => ['image'],
             'content' => ['required', 'min:10'],
+            'technologies' => ['exists:technologies,id'],
+            'type_id' => ['required', 'exists:types,id'],
         ]);
 
         if ($request->hasFile('image')){
@@ -102,6 +113,10 @@ class ProjectController extends Controller
         $data['slug'] = Str::of("$project->id " . $data['title'])->slug('-');
 
         $project->update($data);
+
+        if ($request->has('technologies')){
+            $newPost->technologies()->sync( $request->technologies);
+        }
 
         return redirect()->route('admin.projects.show', compact('project'));
     }
@@ -135,6 +150,7 @@ class ProjectController extends Controller
     {
         $project = Project::onlyTrashed()->findOrFail($slug);
         Storage::delete($project->image);
+        $project->technologies()->detach();
         $project->forceDelete();
 
         return redirect()->route('admin.projects.index');
